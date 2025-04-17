@@ -3,6 +3,7 @@ package com.tany.bannerplayer.activity
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import androidx.viewpager2.widget.ViewPager2
 import com.shuyu.gsyvideoplayer.GSYVideoManager
@@ -93,34 +94,53 @@ class MainActivity:AppCompatActivity() {
         //banner.setDatas(resourcesList)
 
     }
-
-
     val task = Runnable {
         //可能是首尾切换页，两个页面循环跳转
-        if(adapter.getVHMap().containsKey(currentPos)){
-            if(adapter.getVHMap()[currentPos] is PlayAdapter.VideoHolder){
-                val holder = (adapter.getVHMap()[currentPos] as PlayAdapter.VideoHolder)
-                GSYVideoManager.onPause()
-                holder.video.startPlayLogic()
-                banner.isAutoLoop(true)
-                banner.stop()
-                banner.isAutoLoop(false)
-            }else{
-                GSYVideoManager.onPause()
+        if (adapter.getVHMap().containsKey(currentPos)) {
+            if (adapter.itemCount == 1) {
+                if (adapter.getVHMap()[currentPos] is PlayAdapter.VideoHolder) {
+                    val holder = (adapter.getVHMap()[currentPos] as PlayAdapter.VideoHolder)
+                    GSYVideoManager.onPause()
+                    holder.video.isLooping = true
+                    holder.video.startPlayLogic()
+                }
+                stopAutoPlay()
+            } else {
+                if (adapter.getVHMap()[currentPos] is PlayAdapter.VideoHolder) {
+                    val holder = (adapter.getVHMap()[currentPos] as PlayAdapter.VideoHolder)
+                    GSYVideoManager.onPause()
+                    holder.video.startPlayLogic()
 
-                banner.isAutoLoop(true)
-                banner.start()
+                    banner.isAutoLoop(true)
+                    banner.stop()
+                    banner.isAutoLoop(false)
+                }
             }
-        }else{
+        } else {
             GSYVideoManager.onPause()
-            banner.isAutoLoop(true)
-            banner.start()
+            startAutoPlay()
         }
+    }
+
+    /**
+     * 停止自动轮播
+     */
+    private fun stopAutoPlay() {
+        banner.isAutoLoop(false)
+        banner.stop()
+    }
+
+    /**
+     * 开始自动轮播
+     */
+    private fun startAutoPlay() {
+        banner.isAutoLoop(true)
+        banner.start()
     }
 
     override fun onResume() {
         super.onResume()
-        taskHandler.post(task)
+        taskHandler.postDelayed(task,500)
     }
 
 
@@ -130,6 +150,8 @@ class MainActivity:AppCompatActivity() {
     }
     override fun onDestroy() {
         super.onDestroy()
+        taskHandler.removeCallbacksAndMessages(null)
+        GSYVideoManager.onPause()
         GSYVideoManager.releaseAllVideos()
         //移除数据绑定，否则第二次设置适配器出错
         banner.destroy()
